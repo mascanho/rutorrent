@@ -1,9 +1,9 @@
 "use client"
 
-import React from "react"
-
-import { useCallback } from "react"
+import React, { useCallback, useEffect } from "react"
 import { Upload } from "lucide-react"
+import { listen } from "@tauri-apps/api/event"
+
 import { cn } from "@/lib/utils"
 
 interface DropZoneProps {
@@ -13,6 +13,20 @@ interface DropZoneProps {
 
 export function DropZone({ onFilesAdded, compact = false }: DropZoneProps) {
   const [isDragging, setIsDragging] = React.useState(false)
+
+  useEffect(() => {
+    const unlisten = listen("tauri://file-drop", async (event) => {
+      const files = (event.payload as string[]).map((path) => {
+        const name = path.split("/").pop() as string
+        return new File([path], name, { type: "" })
+      })
+      onFilesAdded(files)
+    })
+
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [onFilesAdded])
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -82,8 +96,12 @@ export function DropZone({ onFilesAdded, compact = false }: DropZoneProps) {
           />
         </div>
         <div className="space-y-2">
-          <p className="text-lg font-medium text-foreground">{"Drop files here or click to browse"}</p>
-          <p className="text-sm text-muted-foreground">{"Any file type • Any size"}</p>
+          <p className="text-lg font-medium text-foreground">
+            {"Drop files here or click to browse"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {"Any file type • Any size"}
+          </p>
         </div>
       </div>
     </div>
